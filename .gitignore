@@ -15,3 +15,5 @@ fields_new.txt
 # Credentials
 *.env
 credentials*.json
+
+!Truly unlocked_i-693.pdf
