@@ -1,0 +1,107 @@
+{
+  "selects": {
+    "#caseSearch-idType_input": {
+      "id": "caseSearch-idType_input",
+      "name": "caseSearch-idType",
+      "class": "",
+      "options": [
+        {
+          "value": "1",
+          "text": "Select an Option"
+        },
+        {
+          "value": "AN",
+          "text": "Alien Number"
+        },
+        {
+          "value": "BNUM",
+          "text": "Band ID number"
+        },
+        {
+          "value": "OTH",
+          "text": "Other identifier"
+        },
+        {
+          "value": "USSAID",
+          "text": "US Status Adjuster ID"
+        },
+        {
+          "value": "USCIS",
+          "text": "USCIS Online Account Number"
+        }
+      ]
+    },
+    "#caseSearch-_0d2c0a2b_input": {
+      "id": "caseSearch-_0d2c0a2b_input",
+      "name": "caseSearch-_0d2c0a2b",
+      "class": "",
+      "options": []
+    },
+    "#caseSearch-_0d3c2b_input": {
+      "id": "caseSearch-_0d3c2b_input",
+      "name": "caseSearch-_0d3c2b",
+      "class": "",
+      "options": [
+        {
+          "value": "1",
+          "text": "Select an Option"
+        },
+        {
+          "value": "STSADJ",
+          "text": "Status Adjuster"
+        }
+      ]
+    }
+  },
+  "autocompletes": {
+    "#_0b0b1a_input": {
+      "id": "_0b0b1a_input",
+      "name": "_0b0b1a",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-id_input": {
+      "id": "caseSearch-id_input",
+      "name": "caseSearch-id",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-_0d3c0b_input": {
+      "id": "caseSearch-_0d3c0b_input",
+      "name": "caseSearch-_0d3c0b",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-identityDocumentNumber_input": {
+      "id": "caseSearch-identityDocumentNumber_input",
+      "name": "caseSearch-identityDocumentNumber",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-familyName_input": {
+      "id": "caseSearch-familyName_input",
+      "name": "caseSearch-familyName",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-givenNames_input": {
+      "id": "caseSearch-givenNames_input",
+      "name": "caseSearch-givenNames",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    },
+    "#caseSearch-dob_input": {
+      "id": "caseSearch-dob_input",
+      "name": "caseSearch-dob",
+      "placeholder": "",
+      "datalist_id": "",
+      "type": "autocomplete"
+    }
+  }
+}

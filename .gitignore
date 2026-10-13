@@ -1,0 +1,17 @@
+.venv/
+.venv-1/
+venv/
+__pycache__/
+*.pyc
+
+# Patient data / PHI
+*.pdf
+debug_screenshots/
+eMedical page*.png
+*_fields.txt
+all_fields.txt
+fields_new.txt
+
+# Credentials
+*.env
+credentials*.json

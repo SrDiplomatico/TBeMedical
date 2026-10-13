@@ -1,0 +1,55 @@
+{
+  "login": {
+    "username": "input[type='text']",
+    "password": "#logon-password_input",
+    "submit": "#logon-btnLogon"
+  },
+  "page1": {
+    "_description": "First data entry page after login",
+    "family_name": "#caseSearch-familyName_input",
+    "given_name": "#caseSearch-givenNames_input",
+    "date_of_birth": "#caseSearch-dob_input",
+    "sex_male": "",
+    "sex_female": "",
+    "country_of_birth": "",
+    "next_button": "",
+    "ID": "#caseSearch-identityDocumentNumber_input",
+    "search_button": "#caseSearch-search",
+    "createcase_button": "#caseSearch-createCase"
+  },
+  "page2": {
+    "_description": "Second data entry page",
+    "next_button": "",
+    "sex": "#_0e0ch0b0a0a0c1",
+    "country_of_birth": "#_0e0ch0b0a0a0e1_input",
+    "city_of_birth": "#_0e0ch0b0a0a0f1_input",
+    "prior_county_of_residence": "#_0e0ch0b0a0a0g1_input",
+    "ID_number": "#_0e0ch0b1a0a0a1_input",
+    "identity_document_presented": "#_0e0ch0b1a0a0a1_input",
+    "issuing_country": "#_0e0ch0b1a0a0c1_input"
+  },
+  "page3": {
+    "_description": "Third data entry page",
+    "next_button": "",
+    "ID": "#caseSearch-identityDocumentNumber_input"
+  },
+  "page4": {
+    "_description": "Final page with file uploads",
+    "lab_results_upload": "",
+    "chest_xray_upload": "",
+    "submit_button": ""
+  },
+  "navigation": {
+    "next": "",
+    "previous": "",
+    "save": "",
+    "cancel": "",
+    "ok_modal": "",
+    "confirm_modal": ""
+  },
+  "file_uploads": {
+    "lab_results": "",
+    "chest_xray": "",
+    "add_document": ""
+  }
+}
