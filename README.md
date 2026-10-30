@@ -24,6 +24,21 @@ code-signed. Click **More info → Run anyway**.
 | App opens then nothing happens | Check `%LOCALAPPDATA%\PDF Form Data Extractor\logs\app_YYYY-MM-DD.log` |
 | Chrome launches but automation can't connect | Close every Chrome window, then try again (an existing Chrome absorbs the debug flag). |
 
+## Get the package from GitHub (no local setup)
+
+Every push to `main` builds the Windows package automatically.
+
+1. Open the repository on github.com and click the **Actions** tab.
+2. Click the most recent **Build Windows package** run (green check mark).
+3. Scroll to **Artifacts** at the bottom and click **PDFFormExtractor-windows** to download the zip.
+
+To start a build by hand: Actions tab → **Build Windows package** (left sidebar) →
+**Run workflow** → **Run workflow**. Wait a few minutes, then download the artifact as above.
+
+To publish a permanent download on the **Releases** page, create a tag such as `v1.0.0`
+(Releases → Draft a new release → Choose a tag → type `v1.0.0` → Publish). The workflow
+attaches `PDFFormExtractor.zip` to that release.
+
 ## Build the package (developer machine)
 
 Requires Python 3.11+ from python.org on PATH. Then:
