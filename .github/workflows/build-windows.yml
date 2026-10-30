@@ -1,0 +1,63 @@
+name: Build Windows package
+
+# Builds PDFFormExtractor.zip on a GitHub-hosted Windows machine.
+# Runs automatically on every push to main, and can be started by hand from the
+# Actions tab ("Run workflow"). The zip is attached to the run as an artifact.
+# Pushing a tag like v1.0.0 also publishes it as a GitHub Release.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Build with PyInstaller
+        run: python -m PyInstaller PDFFormExtractor.spec --noconfirm --clean
+
+      - name: Self-test the built executable
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\PDFFormExtractor\PDFFormExtractor.exe" `
+                 -ArgumentList "--self-test" -Wait -PassThru -NoNewWindow `
+                 -RedirectStandardOutput "dist\selftest.log" -RedirectStandardError "dist\selftest.err"
+          Get-Content "dist\selftest.log"
+          if (Test-Path "dist\selftest.err") { Get-Content "dist\selftest.err" }
+          if ($p.ExitCode -ne 0) { throw "Self-test failed with exit code $($p.ExitCode)" }
+
+      - name: Zip package
+        shell: pwsh
+        run: Compress-Archive -Path "dist\PDFFormExtractor" -DestinationPath "dist\PDFFormExtractor.zip" -Force
+
+      - name: Upload zip as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFFormExtractor-windows
+          path: dist/PDFFormExtractor.zip
+          retention-days: 90
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PDFFormExtractor.zip
+          generate_release_notes: true
