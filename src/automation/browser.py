@@ -4,6 +4,7 @@ from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 from typing import Optional
 
 from src.config.settings import EMEDICAL_BASE_URL
+from src.config.paths import is_frozen, CHROME_NOT_FOUND_MESSAGE
 
 
 # Global browser manager instance for session persistence between automation runs
@@ -171,11 +172,23 @@ class BrowserManager:
                 # Fall through to launch a new browser
         
         self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(
+        launch_kwargs = dict(
             headless=headless,
             slow_mo=50,  # Slight delay for stability
             args=["--remote-debugging-port=9222"],
         )
+        # Use the Google Chrome installed on this machine rather than a bundled
+        # Chromium, so the packaged app has no browser download step.
+        try:
+            self.browser = self.playwright.chromium.launch(channel="chrome", **launch_kwargs)
+        except Exception as chrome_err:
+            if is_frozen():
+                self.playwright.stop()
+                self.playwright = None
+                raise RuntimeError(CHROME_NOT_FOUND_MESSAGE) from chrome_err
+            # Development fallback: Playwright's own Chromium (playwright install chromium)
+            print(f"DEBUG: Google Chrome launch failed ({chrome_err}); falling back to bundled Chromium")
+            self.browser = self.playwright.chromium.launch(**launch_kwargs)
         # Create a single context that all tabs will share
         self.context = self.browser.new_context(
             viewport={"width": 1280, "height": 900}

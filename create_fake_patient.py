@@ -234,7 +234,7 @@ def fill_pdf_with_test_data(input_pdf: str, output_pdf: str):
 
 
 if __name__ == "__main__":
-    input_pdf = "Truly unlocked_i-693.pdf"
+    input_pdf = str(Path(__file__).resolve().parent / "Truly unlocked_i-693.pdf")
     output_pdf = "TestPatient1_I693.pdf"
     
     fill_pdf_with_test_data(input_pdf, output_pdf)

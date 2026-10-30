@@ -17,3 +17,9 @@ fields_new.txt
 credentials*.json
 
 !Truly unlocked_i-693.pdf
+
+# Build output
+build/
+dist/
+.venv-build/
+*.zip
