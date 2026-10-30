@@ -1,5 +1,6 @@
 """eMedical automation - main automation controller."""
 
+import re
 import time
 import tkinter as tk
 from tkinter import messagebox
@@ -61,8 +62,9 @@ class EMedicalAutomation:
     """
     Automates data entry into the eMedical portal.
     
-    Opens up to 10 concurrent browser tabs, fills forms, uploads files,
-    and STOPS before final submit for user review.
+    Works in a SINGLE browser tab (eMedical does not allow multiple tabs/sessions):
+    for each patient it fills pages 1-9, uploads files, STOPS before final submit,
+    then returns to Case search (top-left menu) and starts the next patient.
     """
     
     _stop_requested: bool = False
@@ -144,8 +146,10 @@ class EMedicalAutomation:
             f"Resume from Page {start_page}",
             f"You are now logged in to eMedical.\n\n"
             f"Please complete these steps:\n\n"
-            f"1. Search for and open the patient's case\n"
+            f"1. Search for and open the FIRST patient's case\n"
             f"2. Navigate to: {page_desc}\n\n"
+            f"The first patient resumes from that page. Any further\n"
+            f"patients start automatically from Case search.\n\n"
             f"Click OK when you're on the correct page\n"
             f"and ready to continue automation.",
             parent=root
@@ -229,10 +233,15 @@ class EMedicalAutomation:
         skip_checkpoints: bool = False,
     ) -> None:
         """
-        Process a batch of patients concurrently.
+        Process a batch of patients one after another in a single browser tab.
+        
+        After each patient reaches the final page (uploads done, submit NOT clicked)
+        the automation clicks "Case search" and begins the next patient. In resume
+        modes (start_page > 1) only the FIRST patient resumes from that page; every
+        following patient starts fresh from Case search / page 1.
         
         Args:
-            patients: List of PatientFiles to process (max 10)
+            patients: List of PatientFiles to process (max MAX_CONCURRENT_PATIENTS)
             credentials: eMedical login credentials (only required for a new login)
             start_page: Page number to start from:
                 0 = Login (New Case) - do login + start from page 1
@@ -300,119 +309,61 @@ class EMedicalAutomation:
                 self.browser_manager.start(headless=False)
                 login_page = self.browser_manager.new_tab()
             
-            # Determine if we should login
-            should_login = (start_page == 0)
+            # Single tab for the whole batch. eMedical rejects multiple tabs/sessions,
+            # so every patient is processed in this one page, one after another.
+            page = login_page
             
-            # RESUME MODE: Starting from page > 1 (skips login)
-            if start_page > 1:
-                print(f"RESUME MODE: Starting from page {start_page}")
-                # User already confirmed they are on the correct page
-                # (confirmation dialog was shown by main_window before thread started)
-                
-                tabs = [login_page]  # Use this page for resume mode
-            elif start_page == 1:
-                # ALREADY LOGGED IN MODE: Skip login, user is already logged in
-                # Browser connection already happened above, session cookies are in the context
-                print(f"ALREADY LOGGED IN MODE: Using existing browser session")
-                # User already confirmed they are logged in
-                # (confirmation dialog was shown by main_window before thread started)
-                
-                # Reuse the existing eMedical page for patient 1 (already loaded)
-                # Don't open a new blank tab - it may fail to navigate via CDP
-                print(f"DEBUG: Using existing eMedical page for patient 1")
-                
-                print(f"DEBUG: Processing {len(patients)} patients (already logged in mode):")
-                for idx, p in enumerate(patients):
-                    print(f"  Patient {idx+1}: {p.patient_name} - I693: {p.i693_path}")
-                
-                tabs = [login_page]  # First tab is the existing eMedical page
-                
-                # Open additional tabs for patients 2, 3, etc. in the existing browser
-                for i in range(1, len(patients)):
-                    print(f"DEBUG: Opening tab for patient {i+1}...")
-                    new_tab = self.browser_manager.new_tab()
-                    self.browser_manager.navigate_to_emedical(new_tab)
-                    time.sleep(2)  # Wait for page to load
-                    
-                    # Click "Case search" menu item to go to page 1
-                    case_search_selector = "#appMenu-caseSearch_0-body"
-                    try:
-                        new_tab.wait_for_selector(case_search_selector, state="visible", timeout=10000)
-                        new_tab.click(case_search_selector)
-                        print(f"DEBUG: Clicked 'Case search' for patient {i+1} tab")
-                        new_tab.wait_for_load_state("networkidle")
-                        time.sleep(2)
-                    except Exception as e:
-                        print(f"DEBUG: Could not click Case search: {e}")
-                        # Try alternative selectors
-                        try:
-                            alt_selector = "span:has-text('Case search')"
-                            new_tab.click(alt_selector)
-                            print(f"DEBUG: Clicked alternative 'Case search' selector")
-                            new_tab.wait_for_load_state("networkidle")
-                            time.sleep(2)
-                        except Exception:
-                            print(f"DEBUG: Alternative selector also failed")
-                    
-                    tabs.append(new_tab)
-                    print(f"DEBUG: Tab {i+1} ready at: {new_tab.url}")
-            else:
-                # Normal mode (start_page == 0): Login automatically
+            if start_page == 0:
+                # Normal mode: log in automatically
                 if credentials is None:
                     raise ValueError("Credentials are required when starting a new case")
-                self._login(login_page, credentials)
-                
-                # STEP 1: Open ALL tabs upfront BEFORE filling any data
-                # This ensures each tab gets to the Case Search page before we start
-                print(f"DEBUG: Opening {len(patients)} tabs for patients:")
-                for idx, p in enumerate(patients):
-                    print(f"  Patient {idx+1}: {p.patient_name} - I693: {p.i693_path}")
-                
-                tabs = [login_page]  # First tab is the login tab
-                
-                # Open additional tabs for patients 2, 3, etc.
-                for i in range(1, len(patients)):
-                    print(f"DEBUG: Opening tab for patient {i+1}...")
-                    new_tab = self.browser_manager.new_tab()
-                    self.browser_manager.navigate_to_emedical(new_tab)
-                    time.sleep(2)  # Wait for page to load
-                    
-                    # Click "Case search" menu item to go to page 1
-                    case_search_selector = "#appMenu-caseSearch_0-body"
-                    try:
-                        new_tab.wait_for_selector(case_search_selector, state="visible", timeout=10000)
-                        new_tab.click(case_search_selector)
-                        print(f"DEBUG: Clicked 'Case search' for patient {i+1} tab")
-                        new_tab.wait_for_load_state("networkidle")
-                        time.sleep(2)
-                    except Exception as e:
-                        print(f"DEBUG: Could not click Case search: {e}")
-                        # Try alternative selectors
-                        try:
-                            alt_selector = "span:has-text('Case search')"
-                            new_tab.click(alt_selector)
-                            print(f"DEBUG: Clicked alternative 'Case search' selector")
-                            new_tab.wait_for_load_state("networkidle")
-                            time.sleep(2)
-                        except Exception:
-                            print(f"DEBUG: Alternative selector also failed")
-                    
-                    tabs.append(new_tab)
-                    print(f"DEBUG: Tab {i+1} ready at: {new_tab.url}")
+                self._login(page, credentials)
+            elif start_page == 1:
+                print("ALREADY LOGGED IN MODE: Using existing browser session")
+            else:
+                print(f"RESUME MODE: First patient resumes from page {start_page}; "
+                      f"remaining patients start from Case search")
             
-            # STEP 2: Process patients SEQUENTIALLY (Playwright sync API is not thread-safe)
-            # Each patient runs to completion before the next starts
-            # All tabs are already open, so user can see which patient is currently processing
+            print(f"DEBUG: Processing {len(patients)} patient(s) sequentially in one tab:")
+            for idx, p in enumerate(patients):
+                print(f"  Patient {idx+1}: {p.patient_name} - I693: {p.i693_path}")
+            
+            total = len(patients)
             for i, patient in enumerate(patients):
-                tab = tabs[i]
                 patient_num = i + 1
-                print(f"DEBUG: Processing patient {patient_num}/{len(patients)} ({patient.patient_name})")
                 
+                if EMedicalAutomation.is_stop_requested():
+                    print(f"DEBUG: Stop requested - not starting patient {patient_num}")
+                    for remaining in patients[i:]:
+                        self._update_status(remaining.patient_name, "error",
+                                            error_message="Stopped by user before starting")
+                    break
+                
+                # First patient honours the selected start page. Every later patient
+                # begins at Case search (page 1) in the same, already-logged-in tab.
+                if i == 0:
+                    effective_start = start_page
+                else:
+                    effective_start = 1
+                    print(f"DEBUG: Returning to Case search for patient {patient_num}/{total}...")
+                    try:
+                        self._return_to_case_search(page)
+                    except Exception as nav_err:
+                        print(f"DEBUG: Could not return to Case search: {nav_err}")
+                        self._update_status(
+                            patient.patient_name, "error",
+                            error_message=f"Could not return to Case search: {nav_err}"
+                        )
+                        continue
+                
+                print(f"DEBUG: Processing patient {patient_num}/{total} ({patient.patient_name}) "
+                      f"from page {effective_start}")
                 try:
                     self._update_status(patient.patient_name, "processing", current_page=0)
-                    self._process_patient(tab, patient, start_page=start_page, skip_uploads=skip_uploads)
+                    self._process_patient(page, patient, start_page=effective_start, skip_uploads=skip_uploads)
                     self._update_status(patient.patient_name, "ready_for_review", current_page=10)
-                    print(f"DEBUG: Completed patient {patient_num} ({patient.patient_name})")
+                    print(f"DEBUG: Completed patient {patient_num} ({patient.patient_name}) - "
+                          f"stopped before final submit")
                 except Exception as e:
                     print(f"DEBUG: Error processing patient {patient_num}: {e}")
                     import traceback
@@ -426,12 +377,65 @@ class EMedicalAutomation:
             
             print(f"DEBUG: All {len(patients)} patients processed")
             
-            # Don't close browser - leave tabs open for user review and manual submit
+            # Don't close browser - leave it open for user review and manual submit
             # User will close browser when done
             
         except Exception as e:
             # On critical error, still try to leave browser open
             raise e
+    
+    def _return_to_case_search(self, page: Page) -> None:
+        """
+        Navigate the single working tab back to the Case search page (page 1).
+        
+        Tries the top-left "Case search" menu item first, then a text-based
+        fallback, and finally reloads the eMedical home URL and tries again.
+        Raises RuntimeError if the Case search page cannot be reached.
+        """
+        case_search_selector = "#appMenu-caseSearch_0-body"
+        alt_selector = "span:has-text('Case search')"
+        search_button = PAGE_NAVIGATION.get("page1_search_button", "#caseSearch-search")
+        
+        def _on_case_search() -> bool:
+            try:
+                return page.locator(search_button).first.is_visible(timeout=1500)
+            except Exception:
+                return False
+        
+        for attempt in range(1, 4):
+            if _on_case_search():
+                print("DEBUG: Case search page is showing")
+                return
+            
+            for selector in (case_search_selector, alt_selector):
+                try:
+                    page.wait_for_selector(selector, state="visible", timeout=5000)
+                    page.click(selector)
+                    print(f"DEBUG: Clicked 'Case search' ({selector})")
+                    page.wait_for_load_state("networkidle")
+                    time.sleep(1)
+                    break
+                except Exception as e:
+                    print(f"DEBUG: Case search click failed via {selector}: {e}")
+            
+            if _on_case_search():
+                print("DEBUG: Case search page loaded")
+                return
+            
+            # Menu may be hidden behind a dialog or the page may be in a bad state:
+            # reload the eMedical home page and try the menu again.
+            print(f"DEBUG: Not on Case search after attempt {attempt}; reloading eMedical home")
+            try:
+                page.goto(EMEDICAL_BASE_URL)
+                page.wait_for_load_state("networkidle")
+                time.sleep(1.5)
+            except Exception as e:
+                print(f"DEBUG: Reload failed: {e}")
+        
+        raise RuntimeError(
+            "Could not navigate back to the Case search page. "
+            "Check the browser window, return to Case search manually, and resume."
+        )
     
     def _login(self, page: Page, credentials: Credentials) -> None:
         """
@@ -497,18 +501,7 @@ class EMedicalAutomation:
                 print(f"DEBUG: Already on eMedical page, skipping navigation (URL: {page.url})")
             
             # Click "Case search" menu item to get to Page 1
-            case_search_selector = "#appMenu-caseSearch_0-body"
-            try:
-                print(f"DEBUG: Looking for Case search selector...")
-                page.wait_for_selector(case_search_selector, state="visible", timeout=5000)
-                page.click(case_search_selector)
-                print(f"DEBUG: Clicked 'Case search' to go to Page 1")
-                print(f"DEBUG: Waiting for page to load...")
-                page.wait_for_load_state("networkidle")
-                time.sleep(1)  # Reduced from 2 seconds
-                print(f"DEBUG: Case search page loaded")
-            except Exception as e:
-                print(f"DEBUG: Could not click Case search (may already be on page): {e}")
+            self._return_to_case_search(page)
             
             # Page 1: Search for existing case or create new
             print(f"DEBUG: Starting Page 1 - filling search fields...")
@@ -1429,21 +1422,89 @@ class EMedicalAutomation:
             except Exception as e:
                 print(f"DEBUG: Could not select issuing country dropdown: {e}")
         
-        # Always select "No" for identity concerns (same wc-buggyie hidden radio)
+        # Identity concerns: ALWAYS "No". Never "Yes".
+        self._select_no_identity_concerns(page)
+    
+    def _select_no_identity_concerns(self, page: Page) -> None:
+        """
+        Force the Page 5 "Do you have any identity concerns?" answer to "No".
+        
+        The answer is always No. This selects the No radio, clears every other
+        option in the group, then re-reads the DOM to verify. If "No" cannot be
+        confirmed after several attempts the patient is aborted BEFORE clicking
+        Next, so a wrong answer is never carried forward.
+        """
+        from src.automation.field_map_emedical import PAGE5_IDENTITY
+        
         concerns_no = PAGE5_IDENTITY["identity_concerns_no"]
-        page.wait_for_selector(concerns_no, state="attached", timeout=5000)
-        page.evaluate(
-            """(sel) => {
-                const el = document.querySelector(sel);
-                if (!el) return;
-                el.checked = true;
-                el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-            }""",
-            concerns_no
+        # Derive the radio group name from the selector: input[name='...'][value='3']
+        m = re.search(r"name=['\"]([^'\"]+)['\"]", concerns_no)
+        group_name = m.group(1) if m else "pre_exam-confirm_identity-any_id_concerns"
+        
+        # Shared lookup: prefer the field-map selector, but reject it if its label reads
+        # "Yes"; otherwise fall back to the radio in the group whose label reads "No".
+        js_find = """
+            const labelText = (el) => {
+                const lbl = el.id ? document.querySelector(`label[for="${el.id}"]`) : null;
+                const t = (lbl && lbl.textContent) || (el.closest('label') && el.closest('label').textContent) || (el.parentElement && el.parentElement.textContent) || '';
+                return t.trim().toLowerCase();
+            };
+            const isNo = (t) => t === 'no' || t.startsWith('no ') || t.startsWith('no\\n');
+            const isYes = (t) => t === 'yes' || t.startsWith('yes ') || t.startsWith('yes\\n');
+            const group = Array.from(document.querySelectorAll(`input[name="${args.group}"]`));
+            let noEl = document.querySelector(args.sel);
+            if (noEl && isYes(labelText(noEl))) noEl = null;
+            if (!noEl) noEl = group.find(el => isNo(labelText(el))) || null;
+        """
+        
+        js_select_no = "(args) => {" + js_find + """
+            if (!noEl) return { found: false, groupSize: group.length };
+            for (const el of group) { if (el !== noEl && el.checked) { el.checked = false; } }
+            noEl.checked = true;
+            noEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            noEl.dispatchEvent(new Event('input', { bubbles: true }));
+            noEl.dispatchEvent(new Event('change', { bubbles: true }));
+            // Re-assert in case a click handler toggled it
+            for (const el of group) { if (el !== noEl) { el.checked = false; } }
+            noEl.checked = true;
+            return { found: true, groupSize: group.length, value: noEl.value, label: labelText(noEl) };
+        }"""
+        
+        js_verify = "(args) => {" + js_find + """
+            const checked = group.filter(el => el.checked);
+            return {
+                groupSize: group.length,
+                noFound: !!noEl,
+                noChecked: !!(noEl && noEl.checked),
+                othersChecked: checked.filter(el => el !== noEl).map(el => el.value),
+            };
+        }"""
+        
+        args = {"sel": concerns_no, "group": group_name}
+        try:
+            page.wait_for_selector(f"input[name='{group_name}']", state="attached", timeout=10000)
+        except Exception as e:
+            raise RuntimeError(
+                f"Page 5: identity concerns radio group '{group_name}' not found - "
+                f"cannot guarantee 'No' was selected. {e}"
+            ) from e
+        
+        last_state = None
+        for attempt in range(1, 5):
+            result = page.evaluate(js_select_no, args)
+            print(f"DEBUG: Identity concerns -> No (attempt {attempt}): {result}")
+            time.sleep(0.5)
+            last_state = page.evaluate(js_verify, args)
+            print(f"DEBUG: Identity concerns verify: {last_state}")
+            if last_state.get("noChecked") and not last_state.get("othersChecked"):
+                print("DEBUG: VERIFIED 'No' selected for identity concerns")
+                return
+            time.sleep(0.7)
+        
+        raise RuntimeError(
+            "Page 5: could not verify that 'No' is selected for identity concerns "
+            f"(state: {last_state}). Automation stopped for this patient before clicking Next."
         )
-        print(f"DEBUG: Clicked 'No' for identity concerns")
-        time.sleep(0.5)
     
     def _fill_page6_start_exams(self, page: Page) -> None:
         """

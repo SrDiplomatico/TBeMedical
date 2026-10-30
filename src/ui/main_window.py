@@ -748,8 +748,10 @@ class MainWindow:
                 f"Chrome has been launched with remote debugging.\n\n"
                 f"Please complete these steps in the Chrome window:\n"
                 f"1. Log into eMedical\n"
-                f"2. Open/search for the patient's case\n"
+                f"2. Open/search for the FIRST patient's case\n"
                 f"3. Navigate to {page_desc}\n\n"
+                f"The first patient resumes from that page; any further\n"
+                f"patients start automatically from Case search.\n\n"
                 f"Click OK when you're on the correct page,\n"
                 f"or Cancel to abort."
             )
