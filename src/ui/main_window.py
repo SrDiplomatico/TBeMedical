@@ -9,6 +9,7 @@ import subprocess
 import os
 
 from src.config.settings import MAX_CONCURRENT_PATIENTS
+from src.config.paths import find_chrome, CHROME_NOT_FOUND_MESSAGE
 from src.config.credential_store import load_credentials, save_credentials
 from src.models.i693_form import PatientFiles
 from src.parser.pdf_reader import extract_i693_data, validate_i693_form
@@ -682,27 +683,10 @@ class MainWindow:
         self.status_var.set("Launching Chrome with remote debugging...")
         self.root.update()
         
-        # Find Chrome executable
-        chrome_paths = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        ]
-        
-        chrome_path = None
-        for path in chrome_paths:
-            if os.path.exists(path):
-                chrome_path = path
-                break
+        chrome_path = find_chrome()
         
         if not chrome_path:
-            messagebox.showerror(
-                "Chrome Not Found",
-                "Could not find Chrome installation.\n\n"
-                "Please manually launch Chrome with:\n"
-                "chrome.exe --remote-debugging-port=9222\n\n"
-                "Then try again."
-            )
+            messagebox.showerror("Chrome Not Found", CHROME_NOT_FOUND_MESSAGE)
             return False
         
         try:
@@ -900,27 +884,10 @@ class MainWindow:
                 self.status_var.set("Chrome debug port 9222 already open. Ready for 'Already Logged In' mode.")
                 return
         
-        # Common Chrome installation paths on Windows
-        chrome_paths = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        ]
-        
-        # Find Chrome
-        chrome_path = None
-        for path in chrome_paths:
-            if os.path.exists(path):
-                chrome_path = path
-                break
+        chrome_path = find_chrome()
         
         if not chrome_path:
-            messagebox.showerror(
-                "Chrome Not Found",
-                "Could not find Chrome installation.\n\n"
-                "Please install Google Chrome or manually run:\n"
-                "chrome.exe --remote-debugging-port=9222"
-            )
+            messagebox.showerror("Chrome Not Found", CHROME_NOT_FOUND_MESSAGE)
             return
         
         # Check if regular Chrome is already running (will eat our --remote-debugging-port flag)

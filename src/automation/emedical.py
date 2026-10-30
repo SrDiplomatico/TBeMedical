@@ -542,9 +542,8 @@ class EMedicalAutomation:
                 page.wait_for_selector(create_case_button, state="visible", timeout=5000)
             except Exception as btn_err:
                 # Button not found or not visible - take a screenshot to diagnose
-                import pathlib
-                screenshot_dir = pathlib.Path("debug_screenshots")
-                screenshot_dir.mkdir(exist_ok=True)
+                from src.config.paths import screenshots_dir
+                screenshot_dir = screenshots_dir()
                 screenshot_path = screenshot_dir / f"page1_after_search_{patient.patient_name.replace(' ', '_')}.png"
                 try:
                     page.screenshot(path=str(screenshot_path))
