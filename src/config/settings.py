@@ -6,7 +6,8 @@ PAGE_LOAD_TIMEOUT_MS = 30000  # Max wait for page load
 LOGIN_TIMEOUT_MS = 60000  # Max wait for login to complete
 
 # Batch processing
-MAX_CONCURRENT_PATIENTS = 1  # Number of patient buckets/tabs
+MAX_CONCURRENT_PATIENTS = 6  # Number of patient buckets/tabs
+BUCKET_COLUMNS = 3  # Patient buckets per row in the main window
 
 # eMedical URLs
 EMEDICAL_BASE_URL = "https://www.emedical.immi.gov.au/eMedUI/eMedical"

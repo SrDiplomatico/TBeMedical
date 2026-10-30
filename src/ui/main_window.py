@@ -8,7 +8,7 @@ import threading
 import subprocess
 import os
 
-from src.config.settings import MAX_CONCURRENT_PATIENTS
+from src.config.settings import MAX_CONCURRENT_PATIENTS, BUCKET_COLUMNS
 from src.config.paths import find_chrome, CHROME_NOT_FOUND_MESSAGE
 from src.config.credential_store import load_credentials, save_credentials
 from src.models.i693_form import PatientFiles
@@ -25,8 +25,8 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("PDF Form Data Extractor - eMedical Automation")
-        self.root.geometry("850x650")
-        self.root.minsize(750, 550)
+        self.root.geometry("1280x780")
+        self.root.minsize(1100, 700)
         
         # State
         self.patient_buckets: list[PatientBucket] = []
@@ -147,7 +147,14 @@ class MainWindow:
         # ===== Main content - Patient Buckets =====
         content = ttk.Frame(self.root, padding="10")
         content.grid(row=1, column=0, sticky="nsew")
-        content.columnconfigure(0, weight=1)
+        
+        # Lay buckets out in a grid of BUCKET_COLUMNS per row so all of them fit on screen
+        columns = max(1, min(BUCKET_COLUMNS, MAX_CONCURRENT_PATIENTS))
+        rows = -(-MAX_CONCURRENT_PATIENTS // columns)  # ceiling division
+        for c in range(columns):
+            content.columnconfigure(c, weight=1, uniform="bucket")
+        for r in range(rows):
+            content.rowconfigure(r, weight=1)
         
         # Create patient buckets
         for i in range(MAX_CONCURRENT_PATIENTS):
@@ -156,7 +163,7 @@ class MainWindow:
                 bucket_number=i + 1,
                 on_change=self._on_bucket_change
             )
-            bucket.grid(row=0, column=i, sticky="nsew", padx=5, pady=5)
+            bucket.grid(row=i // columns, column=i % columns, sticky="nsew", padx=5, pady=5)
             self.patient_buckets.append(bucket)
         
         # ===== Details Panel =====
